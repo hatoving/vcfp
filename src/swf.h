@@ -7,9 +7,7 @@
 typedef struct {
     uint8_t version;
 
-    char compression_type;
-    char signature_1; // should always be W
-    char signature_2; // should always be S
+    char signature[3];
 
     uint32_t file_length;
     float frame_rate;

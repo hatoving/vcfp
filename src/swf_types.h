@@ -5,29 +5,20 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "tag_types.h"
-
-typedef enum {
-    TAG_End,
-    TAG_ShowFrame,
-    TAG_DefineShape,
-    TAG_SetBackgroundColor = 9,
-    TAG_PlaceObject2 = 26,
-} swf_TAGTYPE;
-
 typedef struct {
     uint8_t R;
     uint8_t G;
     uint8_t B;
-} swf_RGB;
-swf_RGB read_swf_RGB(FILE* file);
+    uint8_t A;
+} swf_RGBA;
+swf_RGBA read_swf_RGB(FILE* file);
 
 typedef struct {
     uint16_t tag_type;
     uint32_t length;
     long offset;
 
-    tag_Collection collection;
+    void* tag;
 } swf_RECORDHEADER;
 swf_RECORDHEADER read_swf_RECORDHEADER(FILE* file);
 
@@ -51,6 +42,6 @@ typedef struct {
 
     float x;
     float y;
-} swf_MATRX;
+} swf_MATRIX;
 
 #endif

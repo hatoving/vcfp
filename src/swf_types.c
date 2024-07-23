@@ -24,12 +24,13 @@ swf_RECT read_swf_RECT(FILE* file) {
     return rect;
 }
 
-swf_RGB read_swf_RGB(FILE* file) {
-    swf_RGB rgb;
+swf_RGBA read_swf_RGB(FILE* file) {
+    swf_RGBA rgb;
 
     fread(&rgb.R, 1, 1, file);
     fread(&rgb.G, 1, 1, file);
     fread(&rgb.B, 1, 1, file);
+    rgb.A = 0xFF;
 
     return rgb;
 }

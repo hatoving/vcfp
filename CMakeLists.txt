@@ -51,6 +51,7 @@ link_directories(
 # Add all the files needed to compile here
 add_executable(${PROJECT_NAME}
 	src/swf_types.c
+	src/tag_types.c
 	src/swf.c
 	src/player.c
 	src/main.c
@@ -59,6 +60,7 @@ add_executable(${PROJECT_NAME}
 # Library to link to (drop the -l prefix). This will mostly be stubs.
 target_link_libraries(${PROJECT_NAME}
 	-Wl,--whole-archive pthread -Wl,--no-whole-archive
+	vitaGL
 	SDL2_mixer
 	SDL2_image
 	SDL2_ttf

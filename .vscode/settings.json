@@ -18,6 +18,9 @@
         "variant": "c",
         "swf_types.h": "c",
         "compare": "c",
-        "clib.h": "c"
+        "clib.h": "c",
+        "bitset": "c",
+        "initializer_list": "c",
+        "valarray": "c"
     }
 }

@@ -4,6 +4,13 @@
 #include "swf.h"
 
 typedef struct {
+    int depth;
+    int id;
+    int tag;
+    void* data;
+} player_DISPLAYOBJECT;
+
+typedef struct {
     swf* current_swf;
 
     int current_frame;
@@ -12,7 +19,9 @@ typedef struct {
 
 void player_init(swf* _swf);
 void player_process_frame();
-void player_draw_frame();
+void player_start_draw_frame();
+void player_end_draw_frame();
+void player_loop();
 void player_quit();
 
 #endif

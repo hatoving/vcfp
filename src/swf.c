@@ -1,20 +1,87 @@
 #include "swf.h"
 #include "swf_types.h"
 
+#include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
+#include <zlib.h>
 #include <psp2/kernel/clib.h>
+
+#include "tag_types.h"
 
 swf read_swf(FILE* file) {
     swf dummy_swf; 
 
-    fread(&dummy_swf.compression_type, 1, 1, file);
-    fread(&dummy_swf.signature_1, 1, 1, file);
-    fread(&dummy_swf.signature_2, 1, 1, file);
+    fread(&dummy_swf.signature, 1, 3, file);
+
+    sceClibPrintf("[vcfp] swf signature: %c%c%c\n", dummy_swf.signature[0], dummy_swf.signature[1], dummy_swf.signature[2]);
+
     fread(&dummy_swf.version, 1, 1, file);
 
     sceClibPrintf("[vcfp] swf version: %i\n", dummy_swf.version);
 
     fread(&dummy_swf.file_length, 4, 1, file);
+
+    if (dummy_swf.signature[0] == 'C') {
+        sceClibPrintf("[vcfp] swf is compressed; compressing now.\n");
+
+        z_stream zs;
+        const int MAX_BUFFER = 128 * 1024;
+
+        uint8_t *input_buffer = (uint8_t *)malloc(MAX_BUFFER);
+        uint8_t *uncompressed_file = (uint8_t *)malloc(dummy_swf.file_length);
+
+        memset(&zs, 0, sizeof(z_stream));
+        //fread(compressed_file, 1, dummy_swf.file_length - ftell(file), file);
+
+        zs.avail_in = 0;
+        zs.avail_out = dummy_swf.file_length;
+        zs.next_in = Z_NULL;
+        zs.next_out = uncompressed_file;
+        zs.zalloc = Z_NULL;
+		zs.zfree = Z_NULL;
+		zs.opaque = Z_NULL;
+
+        int status = inflateInit(&zs);
+
+        if (status != Z_OK) {
+            sceClibPrintf("inflateInit failed\n");
+            free(input_buffer);
+            free(uncompressed_file);
+            return;
+        }
+
+        sceClibPrintf("[vcfp] ");
+
+        do {
+            sceClibPrintf("decompressing... ");
+            if (zs.avail_in == 0) {
+                zs.next_in = input_buffer;
+                zs.avail_in = fread(input_buffer, 1, MAX_BUFFER, file);
+            }
+            if (zs.avail_in == 0)
+                break;
+            status = inflate(&zs, Z_SYNC_FLUSH);
+        } while(status != Z_STREAM_END);
+
+        sceClibPrintf("\n");
+        inflateEnd(&zs);
+
+        if (status != Z_STREAM_END) {
+            sceClibPrintf("decompress failed\n");
+            free(input_buffer);
+            free(uncompressed_file);
+            return;
+        }
+        
+        sceClibPrintf("[vcfp] swf decompression done\n");
+
+        fclose(file);
+        file = fmemopen((void*)uncompressed_file, dummy_swf.file_length, "rb");
+
+        free(input_buffer);
+        free(uncompressed_file);
+    }
 
     dummy_swf.frame_size = read_swf_RECT(file);
 
@@ -42,9 +109,20 @@ void read_swf_tags(FILE* file, swf* _swf) {
         fseek(file, _swf->records[i].offset, SEEK_SET);
 
         switch(_swf->records[i].tag_type) {
-            case 9: {
-                swf_RGB rgb = read_swf_RGB(file);
-                _swf->records->collection.background_tag.rgb = rgb;
+            case TAG_DefineShape: {
+                tag_DefineShapeTag* tag = tag_read_DefineShape(file, _swf->records[i]);
+                _swf->records[i].tag = tag;
+                break;
+            }
+            case TAG_SetBackgroundColor: {
+                swf_RGBA rgb = read_swf_RGB(file);
+                _swf->records[i].tag = (tag_BackgroundColorTag*)malloc(sizeof(tag_BackgroundColorTag));
+                ((tag_BackgroundColorTag*)_swf->records[i].tag)->rgb = rgb;
+                //_swf->records[i]->tag->background_tag.rgb = rgb;
+                break;
+            }
+            case TAG_PlaceObject2: {
+
                 break;
             }
         }
@@ -65,7 +143,7 @@ void read_swf_records(FILE* file, swf* _swf) {
         size++;
         _swf->records = realloc(_swf->records, size * sizeof(swf_RECORDHEADER));
         if (_swf->records == NULL) {
-            perror("Failed to allocate memory");
+            sceClibPrintf("Failed to allocate memory\n");
             exit(1);
         }
 
